@@ -30,7 +30,6 @@ import (
 func main() {
 	cfg := config.Load()
 
-	// Resolve schema directory relative to the executable
 	execPath, err := os.Executable()
 	if err != nil {
 		log.Fatalf("resolve executable path: %v", err)
@@ -49,7 +48,7 @@ func main() {
 	}
 	defer mq.Close()
 
-	svc := service.New(repo, mq)
+	svc := service.New(repo, mq, cfg.Quarantine)
 
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -75,6 +74,7 @@ func main() {
 			nfe.GET("", h.ListNFes)
 			nfe.GET("/summary", h.ClientSummary)
 			nfe.GET("/unidentified", h.ListUnidentified)
+			nfe.GET("/quarantine", h.Quarantine)
 		}
 	}
 

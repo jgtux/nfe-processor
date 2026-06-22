@@ -43,6 +43,7 @@ const $route = useRoute()
 const nav = [
   { to: '/',             label: 'Upload' },
   { to: '/dashboard',    label: 'Dashboard' },
-  { to: '/unidentified', label: 'Unidentified' }
+  { to: '/unidentified', label: 'Unidentified' },
+  { to: '/quarantine',   label: 'Quarantine' }
 ]
 </script>

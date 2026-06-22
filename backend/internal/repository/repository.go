@@ -42,12 +42,12 @@ func (r *NFeRepository) migrate() error {
 			id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			upload_id         UUID NOT NULL REFERENCES nfe_uploads(id),
 			access_key        VARCHAR(44) UNIQUE NOT NULL,
-			issuer_name       TEXT NOT NULL,
-			issuer_cnpj       VARCHAR(14) NOT NULL,
-			recipient_name    TEXT NOT NULL,
-			recipient_cnpj    VARCHAR(14) NOT NULL,
+			issuer_name       TEXT NOT NULL DEFAULT '',
+			issuer_cnpj       VARCHAR(14) NOT NULL DEFAULT '',
+			recipient_name    TEXT NOT NULL DEFAULT '',
+			recipient_cnpj    VARCHAR(14) NOT NULL DEFAULT '',
 			total_amount      NUMERIC(15,2) NOT NULL DEFAULT 0,
-			issued_at         TIMESTAMPTZ NOT NULL,
+			issued_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			operation         VARCHAR(20) NOT NULL DEFAULT 'unidentified',
 			linked_client     TEXT,
 			unidentified_note TEXT,
@@ -120,20 +120,61 @@ func (r *NFeRepository) UpsertNFe(nfe *domain.NFe) error {
 	return err
 }
 
+// ListAll returns all successfully processed NF-es, excluding quarantine (error) records.
 func (r *NFeRepository) ListAll() ([]domain.NFe, error) {
 	var list []domain.NFe
-	err := r.db.Select(&list, `SELECT * FROM nfes ORDER BY created_at DESC`)
-	return list, err
-}
-
-func (r *NFeRepository) ListUnidentified() ([]domain.NFe, error) {
-	var list []domain.NFe
 	err := r.db.Select(&list, `
-		SELECT * FROM nfes WHERE operation = 'unidentified' ORDER BY created_at DESC
+		SELECT * FROM nfes
+		WHERE status != 'error'
+		ORDER BY created_at DESC
 	`)
 	return list, err
 }
 
+// ListUnidentified returns processed NF-es with no internal client match.
+func (r *NFeRepository) ListUnidentified() ([]domain.NFe, error) {
+	var list []domain.NFe
+	err := r.db.Select(&list, `
+		SELECT * FROM nfes
+		WHERE operation = 'unidentified'
+		  AND status = 'processed'
+		ORDER BY created_at DESC
+	`)
+	return list, err
+}
+
+// ListQuarantine returns NF-es that failed validation or parsing.
+func (r *NFeRepository) ListQuarantine() ([]domain.NFe, error) {
+	var list []domain.NFe
+	err := r.db.Select(&list, `
+		SELECT * FROM nfes
+		WHERE status = 'error'
+		ORDER BY created_at DESC
+	`)
+	return list, err
+}
+
+// DeleteExpiredQuarantine removes quarantined NF-es older than ttlDays
+// and their corresponding uploads. Returns the number of deleted records.
+func (r *NFeRepository) DeleteExpiredQuarantine(ttlDays int) (int64, error) {
+	result, err := r.db.Exec(`
+		WITH deleted AS (
+			DELETE FROM nfes
+			WHERE status = 'error'
+			  AND created_at < NOW() - ($1 || ' days')::INTERVAL
+			RETURNING upload_id
+		)
+		DELETE FROM nfe_uploads
+		WHERE id IN (SELECT upload_id FROM deleted)
+	`, ttlDays)
+	if err != nil {
+		return 0, fmt.Errorf("delete expired quarantine: %w", err)
+	}
+	n, _ := result.RowsAffected()
+	return n, nil
+}
+
+// ClientSummary aggregates purchase/sale counts per linked client.
 func (r *NFeRepository) ClientSummary() ([]domain.ClientSummary, error) {
 	var rows []domain.ClientSummary
 	err := r.db.Select(&rows, `

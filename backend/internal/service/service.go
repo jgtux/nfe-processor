@@ -3,7 +3,9 @@ package service
 import (
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/nfe-processor/backend/internal/config"
 	"github.com/nfe-processor/backend/internal/domain"
 	"github.com/nfe-processor/backend/internal/mock"
 	"github.com/nfe-processor/backend/internal/parser"
@@ -15,18 +17,46 @@ type NFeService struct {
 	repo    *repository.NFeRepository
 	queue   *queue.RabbitMQ
 	clients *mock.ClientService
+	cfg     config.QuarantineConfig
 }
 
-func New(repo *repository.NFeRepository, q *queue.RabbitMQ) *NFeService {
+func New(repo *repository.NFeRepository, q *queue.RabbitMQ, cfg config.QuarantineConfig) *NFeService {
 	svc := &NFeService{
 		repo:    repo,
 		queue:   q,
 		clients: &mock.ClientService{},
+		cfg:     cfg,
 	}
+
 	if err := q.Consume(svc.processMessage); err != nil {
 		log.Fatalf("[service] failed to start consumer: %v", err)
 	}
+
+	go svc.startCleanupJob()
+
 	return svc
+}
+
+// startCleanupJob runs the quarantine cleanup on startup and then
+// periodically according to QUARANTINE_CLEANUP_INTERVAL_HOURS.
+func (s *NFeService) startCleanupJob() {
+	s.runCleanup()
+	ticker := time.NewTicker(time.Duration(s.cfg.CleanupInterval) * time.Hour)
+	defer ticker.Stop()
+	for range ticker.C {
+		s.runCleanup()
+	}
+}
+
+func (s *NFeService) runCleanup() {
+	n, err := s.repo.DeleteExpiredQuarantine(s.cfg.TTLDays)
+	if err != nil {
+		log.Printf("[quarantine] cleanup error: %v", err)
+		return
+	}
+	if n > 0 {
+		log.Printf("[quarantine] deleted %d expired records (ttl=%d days)", n, s.cfg.TTLDays)
+	}
 }
 
 // EnqueueXML persists the raw XML in the database and publishes only the upload ID to the queue.
@@ -99,6 +129,7 @@ func (s *NFeService) classify(nfe *domain.NFe) {
 
 func (s *NFeService) ListAll() ([]domain.NFe, error)              { return s.repo.ListAll() }
 func (s *NFeService) ListUnidentified() ([]domain.NFe, error)     { return s.repo.ListUnidentified() }
+func (s *NFeService) ListQuarantine() ([]domain.NFe, error)       { return s.repo.ListQuarantine() }
 func (s *NFeService) ClientSummary() ([]domain.ClientSummary, error) { return s.repo.ClientSummary() }
 func (s *NFeService) InternalClients() ([]domain.InternalClient, error) {
 	return s.clients.GetAll()

@@ -3,14 +3,16 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	DB       DBConfig
-	Server   ServerConfig
-	RabbitMQ RabbitMQConfig
+	DB         DBConfig
+	Server     ServerConfig
+	RabbitMQ   RabbitMQConfig
+	Quarantine QuarantineConfig
 }
 
 type DBConfig struct {
@@ -31,8 +33,16 @@ type RabbitMQConfig struct {
 	QueueName string
 }
 
+type QuarantineConfig struct {
+	TTLDays         int
+	CleanupInterval int // hours between cleanup runs
+}
+
 func Load() *Config {
 	_ = godotenv.Load()
+
+	ttl, _ := strconv.Atoi(getEnv("QUARANTINE_TTL_DAYS", "30"))
+	interval, _ := strconv.Atoi(getEnv("QUARANTINE_CLEANUP_INTERVAL_HOURS", "24"))
 
 	return &Config{
 		DB: DBConfig{
@@ -49,6 +59,10 @@ func Load() *Config {
 		RabbitMQ: RabbitMQConfig{
 			URL:       getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
 			QueueName: getEnv("RABBITMQ_QUEUE", "nfe_queue"),
+		},
+		Quarantine: QuarantineConfig{
+			TTLDays:         ttl,
+			CleanupInterval: interval,
 		},
 	}
 }

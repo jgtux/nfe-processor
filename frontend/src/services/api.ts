@@ -20,6 +20,10 @@ export const nfeApi = {
     return api.get<{ data: NFe[] }>('/nfe/unidentified').then(r => r.data.data)
   },
 
+  listQuarantine(): Promise<NFe[]> {
+    return api.get<{ data: NFe[] }>('/nfe/quarantine').then(r => r.data.data)
+  },
+
   clientSummary(): Promise<ClientSummary[]> {
     return api.get<{ data: ClientSummary[] }>('/nfe/summary').then(r => r.data.data)
   },
