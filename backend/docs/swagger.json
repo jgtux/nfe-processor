@@ -1,0 +1,364 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "API for receiving, processing and classifying NF-e (Nota Fiscal Eletrônica) XML files.",
+        "title": "NF-e Processor API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/clients": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clients"
+                ],
+                "summary": "List internal clients",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response-array_domain_InternalClient"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/nfe": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nfe"
+                ],
+                "summary": "List all NF-es",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response-array_domain_NFe"
+                        }
+                    }
+                }
+            }
+        },
+        "/nfe/summary": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nfe"
+                ],
+                "summary": "Client summary",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response-array_domain_ClientSummary"
+                        }
+                    }
+                }
+            }
+        },
+        "/nfe/unidentified": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nfe"
+                ],
+                "summary": "List unidentified NF-es",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response-array_domain_NFe"
+                        }
+                    }
+                }
+            }
+        },
+        "/xml/upload": {
+            "post": {
+                "description": "Receives one or more NF-e XML files, validates and enqueues for async processing via RabbitMQ",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nfe"
+                ],
+                "summary": "Upload NF-e XML files",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "XML file(s)",
+                        "name": "files",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response-handler_uploadResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response-any"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "domain.ClientSummary": {
+            "type": "object",
+            "properties": {
+                "client": {
+                    "type": "string"
+                },
+                "purchases": {
+                    "type": "integer"
+                },
+                "sales": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.InternalClient": {
+            "type": "object",
+            "properties": {
+                "cnpj": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.NFe": {
+            "type": "object",
+            "properties": {
+                "access_key": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "error_msg": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "issued_at": {
+                    "type": "string"
+                },
+                "issuer_cnpj": {
+                    "type": "string"
+                },
+                "issuer_name": {
+                    "type": "string"
+                },
+                "linked_client": {
+                    "type": "string"
+                },
+                "operation": {
+                    "$ref": "#/definitions/domain.OperationType"
+                },
+                "recipient_cnpj": {
+                    "type": "string"
+                },
+                "recipient_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/domain.ProcessingStatus"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "unidentified_note": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "upload_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.OperationType": {
+            "type": "string",
+            "enum": [
+                "purchase",
+                "sale",
+                "unidentified"
+            ],
+            "x-enum-varnames": [
+                "OperationPurchase",
+                "OperationSale",
+                "OperationUnidentified"
+            ]
+        },
+        "domain.ProcessingStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "processed",
+                "error"
+            ],
+            "x-enum-varnames": [
+                "StatusPending",
+                "StatusProcessed",
+                "StatusError"
+            ]
+        },
+        "handler.Response-any": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "error": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.Response-array_domain_ClientSummary": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.ClientSummary"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.Response-array_domain_InternalClient": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.InternalClient"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.Response-array_domain_NFe": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.NFe"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.Response-handler_uploadResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handler.uploadResponse"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.uploadFileResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "file": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.uploadResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.uploadFileResult"
+                    }
+                }
+            }
+        }
+    }
+}

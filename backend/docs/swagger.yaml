@@ -1,0 +1,241 @@
+basePath: /api/v1
+definitions:
+  domain.ClientSummary:
+    properties:
+      client:
+        type: string
+      purchases:
+        type: integer
+      sales:
+        type: integer
+    type: object
+  domain.InternalClient:
+    properties:
+      cnpj:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  domain.NFe:
+    properties:
+      access_key:
+        type: string
+      created_at:
+        type: string
+      error_msg:
+        type: string
+      id:
+        type: string
+      issued_at:
+        type: string
+      issuer_cnpj:
+        type: string
+      issuer_name:
+        type: string
+      linked_client:
+        type: string
+      operation:
+        $ref: '#/definitions/domain.OperationType'
+      recipient_cnpj:
+        type: string
+      recipient_name:
+        type: string
+      status:
+        $ref: '#/definitions/domain.ProcessingStatus'
+      total_amount:
+        type: number
+      unidentified_note:
+        type: string
+      updated_at:
+        type: string
+      upload_id:
+        type: string
+    type: object
+  domain.OperationType:
+    enum:
+    - purchase
+    - sale
+    - unidentified
+    type: string
+    x-enum-varnames:
+    - OperationPurchase
+    - OperationSale
+    - OperationUnidentified
+  domain.ProcessingStatus:
+    enum:
+    - pending
+    - processed
+    - error
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusProcessed
+    - StatusError
+  handler.Response-any:
+    properties:
+      data: {}
+      error:
+        type: string
+      total:
+        type: integer
+    type: object
+  handler.Response-array_domain_ClientSummary:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/domain.ClientSummary'
+        type: array
+      error:
+        type: string
+      total:
+        type: integer
+    type: object
+  handler.Response-array_domain_InternalClient:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/domain.InternalClient'
+        type: array
+      error:
+        type: string
+      total:
+        type: integer
+    type: object
+  handler.Response-array_domain_NFe:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/domain.NFe'
+        type: array
+      error:
+        type: string
+      total:
+        type: integer
+    type: object
+  handler.Response-handler_uploadResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.uploadResponse'
+      error:
+        type: string
+      total:
+        type: integer
+    type: object
+  handler.uploadFileResult:
+    properties:
+      error:
+        type: string
+      file:
+        type: string
+      id:
+        type: string
+    type: object
+  handler.uploadResponse:
+    properties:
+      message:
+        type: string
+      results:
+        items:
+          $ref: '#/definitions/handler.uploadFileResult'
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API for receiving, processing and classifying NF-e (Nota Fiscal Eletrônica)
+    XML files.
+  title: NF-e Processor API
+  version: "1.0"
+paths:
+  /clients:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response-array_domain_InternalClient'
+      summary: List internal clients
+      tags:
+      - clients
+  /health:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response-any'
+      summary: Health check
+      tags:
+      - system
+  /nfe:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response-array_domain_NFe'
+      summary: List all NF-es
+      tags:
+      - nfe
+  /nfe/summary:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response-array_domain_ClientSummary'
+      summary: Client summary
+      tags:
+      - nfe
+  /nfe/unidentified:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response-array_domain_NFe'
+      summary: List unidentified NF-es
+      tags:
+      - nfe
+  /xml/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Receives one or more NF-e XML files, validates and enqueues for
+        async processing via RabbitMQ
+      parameters:
+      - description: XML file(s)
+        in: formData
+        name: files
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/handler.Response-handler_uploadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.Response-any'
+      summary: Upload NF-e XML files
+      tags:
+      - nfe
+schemes:
+- http
+- https
+swagger: "2.0"
