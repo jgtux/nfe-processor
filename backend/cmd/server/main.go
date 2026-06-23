@@ -66,7 +66,10 @@ func main() {
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/health", h.Health)
-		v1.POST("/xml/upload", h.UploadXML)
+		v1.POST("/xml/upload",
+			middleware.RateLimiter(cfg.RateLimit.Capacity, cfg.RateLimit.Rate),
+			h.UploadXML,
+		)
 		v1.GET("/clients", h.ListClients)
 
 		nfe := v1.Group("/nfe")

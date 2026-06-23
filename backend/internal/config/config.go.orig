@@ -13,7 +13,6 @@ type Config struct {
 	Server     ServerConfig
 	RabbitMQ   RabbitMQConfig
 	Quarantine QuarantineConfig
-	RateLimit  RateLimitConfig
 }
 
 type DBConfig struct {
@@ -36,12 +35,7 @@ type RabbitMQConfig struct {
 
 type QuarantineConfig struct {
 	TTLDays         int
-	CleanupInterval int
-}
-
-type RateLimitConfig struct {
-	Capacity float64 // burst size
-	Rate     float64 // sustained requests per second
+	CleanupInterval int // hours between cleanup runs
 }
 
 func Load() *Config {
@@ -49,8 +43,6 @@ func Load() *Config {
 
 	ttl, _ := strconv.Atoi(getEnv("QUARANTINE_TTL_DAYS", "30"))
 	interval, _ := strconv.Atoi(getEnv("QUARANTINE_CLEANUP_INTERVAL_HOURS", "24"))
-	capacity, _ := strconv.ParseFloat(getEnv("RATE_LIMIT_BURST", "10"), 64)
-	rate, _ := strconv.ParseFloat(getEnv("RATE_LIMIT_RPS", "2"), 64)
 
 	return &Config{
 		DB: DBConfig{
@@ -71,10 +63,6 @@ func Load() *Config {
 		Quarantine: QuarantineConfig{
 			TTLDays:         ttl,
 			CleanupInterval: interval,
-		},
-		RateLimit: RateLimitConfig{
-			Capacity: capacity,
-			Rate:     rate,
 		},
 	}
 }

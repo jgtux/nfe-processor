@@ -1,0 +1,41 @@
+--- backend/cmd/server/main.go	2026-06-22 20:59:02.792837174 +0000
++++ backend/cmd/server/main.go	2026-06-23 00:35:49.319172062 +0000
+@@ -30,7 +30,6 @@
+ func main() {
+ 	cfg := config.Load()
+ 
+-	// Resolve schema directory relative to the executable
+ 	execPath, err := os.Executable()
+ 	if err != nil {
+ 		log.Fatalf("resolve executable path: %v", err)
+@@ -49,7 +48,7 @@
+ 	}
+ 	defer mq.Close()
+ 
+-	svc := service.New(repo, mq)
++	svc := service.New(repo, mq, cfg.Quarantine)
+ 
+ 	r := gin.New()
+ 	r.Use(gin.Recovery())
+@@ -67,14 +66,20 @@
+ 	v1 := r.Group("/api/v1")
+ 	{
+ 		v1.GET("/health", h.Health)
+-		v1.POST("/xml/upload", h.UploadXML)
+ 		v1.GET("/clients", h.ListClients)
+ 
++		// Rate limited upload endpoint
++		v1.POST("/xml/upload",
++			middleware.RateLimiter(cfg.RateLimit.Capacity, cfg.RateLimit.Rate),
++			h.UploadXML,
++		)
++
+ 		nfe := v1.Group("/nfe")
+ 		{
+ 			nfe.GET("", h.ListNFes)
+ 			nfe.GET("/summary", h.ClientSummary)
+ 			nfe.GET("/unidentified", h.ListUnidentified)
++			nfe.GET("/quarantine", h.Quarantine)
+ 		}
+ 	}
+ 

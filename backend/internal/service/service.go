@@ -90,14 +90,23 @@ func (s *NFeService) processMessage(msg domain.QueueMessage) error {
 	nfe, err := parser.ParseNFe(xmlData)
 	if err != nil {
 		log.Printf("[consumer] parse error upload_id=%s: %v", msg.UploadID, err)
-		_ = s.repo.UpsertNFe(&domain.NFe{
+		if quarErr := s.repo.UpsertNFe(&domain.NFe{
 			UploadID:  msg.UploadID,
 			AccessKey: msg.UploadID, // fallback key to satisfy UNIQUE constraint
 			Status:    domain.StatusError,
 			ErrorMsg:  err.Error(),
 			Operation: domain.OperationUnidentified,
-		})
-		return nil // ack — permanently broken XML should not be requeued
+		}); quarErr != nil {
+			log.Printf("[consumer] quarantine persist error upload_id=%s: %v", msg.UploadID, quarErr)
+			return fmt.Errorf("quarantine persist: %w", quarErr) // nack → requeue
+		}
+
+		// Delete raw XML — error message in quarantine is sufficient for diagnosis
+		if delErr := s.repo.DeleteUpload(msg.UploadID); delErr != nil {
+			log.Printf("[consumer] failed to delete upload upload_id=%s: %v", msg.UploadID, delErr)
+		}
+
+		return nil // ack — XML is permanently invalid
 	}
 
 	nfe.UploadID = msg.UploadID
@@ -106,6 +115,11 @@ func (s *NFeService) processMessage(msg domain.QueueMessage) error {
 
 	if err := s.repo.UpsertNFe(nfe); err != nil {
 		return fmt.Errorf("persist nfe access_key=%s: %w", nfe.AccessKey, err)
+	}
+
+	// Delete raw XML — data is now in nfes table
+	if delErr := s.repo.DeleteUpload(msg.UploadID); delErr != nil {
+		log.Printf("[consumer] failed to delete upload upload_id=%s: %v", msg.UploadID, delErr)
 	}
 
 	log.Printf("[consumer] processed access_key=%s operation=%s", nfe.AccessKey, nfe.Operation)

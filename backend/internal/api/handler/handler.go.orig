@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -9,11 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nfe-processor/backend/internal/service"
-)
-
-const (
-	maxFileSize    = 1 << 20 // 1 MB — NF-e XMLs are typically < 50 KB
-	maxFilesPerReq = 10
 )
 
 type Handler struct {
@@ -95,13 +89,6 @@ func (h *Handler) UploadXML(c *gin.Context) {
 		Message: "files received and enqueued for processing",
 		Results: results,
 	})
-}
-
-// isXMLContent performs a cheap pre-check before enqueuing.
-func isXMLContent(data []byte) bool {
-	trimmed := bytes.TrimSpace(data)
-	return bytes.HasPrefix(trimmed, []byte("<?xml")) ||
-		bytes.HasPrefix(trimmed, []byte("<nfeProc"))
 }
 
 // ListNFes godoc

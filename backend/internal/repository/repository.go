@@ -86,6 +86,14 @@ func (r *NFeRepository) GetUpload(uploadID string) ([]byte, error) {
 }
 
 // UpsertNFe inserts or updates a processed NF-e record.
+
+// DeleteUpload removes the raw XML from nfe_uploads after processing.
+// Called after successful processing and after quarantine record is created,
+// to prevent nfe_uploads from growing indefinitely.
+func (r *NFeRepository) DeleteUpload(uploadID string) error {
+	_, err := r.db.Exec(`DELETE FROM nfe_uploads WHERE id = $1`, uploadID)
+	return err
+}
 func (r *NFeRepository) UpsertNFe(nfe *domain.NFe) error {
 	if nfe.ID == "" {
 		nfe.ID = uuid.New().String()
@@ -154,18 +162,13 @@ func (r *NFeRepository) ListQuarantine() ([]domain.NFe, error) {
 	return list, err
 }
 
-// DeleteExpiredQuarantine removes quarantined NF-es older than ttlDays
-// and their corresponding uploads. Returns the number of deleted records.
+// DeleteExpiredQuarantine removes quarantined NF-es older than ttlDays.
+// nfe_uploads are deleted at processing time, so only nfes rows remain.
 func (r *NFeRepository) DeleteExpiredQuarantine(ttlDays int) (int64, error) {
 	result, err := r.db.Exec(`
-		WITH deleted AS (
-			DELETE FROM nfes
-			WHERE status = 'error'
-			  AND created_at < NOW() - ($1 || ' days')::INTERVAL
-			RETURNING upload_id
-		)
-		DELETE FROM nfe_uploads
-		WHERE id IN (SELECT upload_id FROM deleted)
+		DELETE FROM nfes
+		WHERE status = 'error'
+		  AND created_at < NOW() - ($1 || ' days')::INTERVAL
 	`, ttlDays)
 	if err != nil {
 		return 0, fmt.Errorf("delete expired quarantine: %w", err)
