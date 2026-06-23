@@ -17,6 +17,7 @@ const docTemplate = `{
     "paths": {
         "/clients": {
             "get": {
+                "description": "Returns all clients registered in the internal clients mock API",
                 "produces": [
                     "application/json"
                 ],
@@ -55,13 +56,34 @@ const docTemplate = `{
         },
         "/nfe": {
             "get": {
+                "description": "Returns all successfully processed NF-es, excluding quarantined (error) records",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "nfe"
                 ],
-                "summary": "List all NF-es",
+                "summary": "List all processed NF-es",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response-array_domain_NFe"
+                        }
+                    }
+                }
+            }
+        },
+        "/nfe/quarantine": {
+            "get": {
+                "description": "Returns NF-es that failed XSD validation, mod 11 checks, or parsing. Automatically deleted after QUARANTINE_TTL_DAYS days.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nfe"
+                ],
+                "summary": "List quarantined NF-es",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -74,6 +96,7 @@ const docTemplate = `{
         },
         "/nfe/summary": {
             "get": {
+                "description": "Returns purchase and sale counts grouped by internal client",
                 "produces": [
                     "application/json"
                 ],
@@ -93,6 +116,7 @@ const docTemplate = `{
         },
         "/nfe/unidentified": {
             "get": {
+                "description": "Returns processed NF-es that could not be linked to any internal client",
                 "produces": [
                     "application/json"
                 ],
