@@ -37,24 +37,32 @@ type uploadResponse struct {
 
 // UploadXML godoc
 // @Summary      Upload NF-e XML files
-// @Description  Receives one or more NF-e XML files, validates and enqueues for async processing via RabbitMQ
+// @Description  Receives one or more NF-e XML files (max 10 per request, max 1MB each), validates and enqueues for async processing via RabbitMQ
 // @Tags         nfe
 // @Accept       multipart/form-data
 // @Produce      json
 // @Param        files  formData  file  true  "XML file(s)"
 // @Success      202    {object}  Response[uploadResponse]
 // @Failure      400    {object}  Response[any]
+// @Failure      429    {object}  Response[any]
 // @Router       /xml/upload [post]
 func (h *Handler) UploadXML(c *gin.Context) {
+	// Limit total body size before parsing
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxFilesPerReq*maxFileSize)
+
 	form, err := c.MultipartForm()
 	if err != nil {
-		Fail(c, http.StatusBadRequest, fmt.Errorf("invalid form data"))
+		Fail(c, http.StatusBadRequest, fmt.Errorf("invalid form data or request too large"))
 		return
 	}
 
 	files := form.File["files"]
 	if len(files) == 0 {
 		Fail(c, http.StatusBadRequest, fmt.Errorf("no files provided (field: files)"))
+		return
+	}
+	if len(files) > maxFilesPerReq {
+		Fail(c, http.StatusBadRequest, fmt.Errorf("too many files: max %d per request", maxFilesPerReq))
 		return
 	}
 
@@ -70,6 +78,14 @@ func (h *Handler) UploadXML(c *gin.Context) {
 			}
 		}
 
+		if fh.Size > maxFileSize {
+			results = append(results, uploadFileResult{
+				File:  fh.Filename,
+				Error: fmt.Sprintf("file too large: max %d KB", maxFileSize/1024),
+			})
+			continue
+		}
+
 		f, err := fh.Open()
 		if err != nil {
 			results = append(results, uploadFileResult{File: fh.Filename, Error: "failed to open file"})
@@ -79,6 +95,14 @@ func (h *Handler) UploadXML(c *gin.Context) {
 		f.Close()
 		if err != nil {
 			results = append(results, uploadFileResult{File: fh.Filename, Error: "failed to read file"})
+			continue
+		}
+
+		if !isXMLContent(data) {
+			results = append(results, uploadFileResult{
+				File:  fh.Filename,
+				Error: "file content is not a valid NF-e XML (expected <nfeProc> root)",
+			})
 			continue
 		}
 
