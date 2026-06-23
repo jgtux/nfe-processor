@@ -23,7 +23,7 @@ except ImportError:
 BASE_URL = "http://localhost:8080"
 API      = f"{BASE_URL}/api/v1"
 
-EXAMPLES_DIR = Path(__file__).parent / "examples"
+EXAMPLES_DIR = Path(__file__).parent.parent.parent / "examples"
 
 GREEN  = "\033[92m"
 RED    = "\033[91m"
