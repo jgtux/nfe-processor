@@ -1,0 +1,28 @@
+name: backend-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # golang:1.22-alpine matches backend/Dockerfile's own build stage.
+    # Needed for real: the XSD validator (lestrrat-go/libxml2, a cgo
+    # binding) is incompatible with newer libxml2 releases shipped by
+    # non-Alpine distros/runners -- Alpine's older libxml2 is what this
+    # project is actually built and tested against.
+    container: golang:1.22-alpine
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: install build dependencies
+        run: apk add --no-cache git libxml2-dev gcc musl-dev
+
+      - uses: actions/checkout@v4
+
+      - name: go test
+        run: CGO_ENABLED=1 go test ./... -v -race
