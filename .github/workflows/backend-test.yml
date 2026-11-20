@@ -26,3 +26,14 @@ jobs:
 
       - name: go test
         run: CGO_ENABLED=1 go test ./... -v -race
+
+      # Pinned to v1.1.4, the last govulncheck whose go.mod accepts Go 1.22
+      # (v1.2.0+ need 1.25, and this image builds with its own toolchain).
+      # The vulnerability database is fetched live, so the pin doesn't make
+      # the results stale. Expect stdlib findings while the build stays on
+      # 1.22, which is past end of life: that's the signal, not noise.
+      - name: install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+
+      - name: govulncheck
+        run: CGO_ENABLED=1 "$(go env GOPATH)/bin/govulncheck" ./...
