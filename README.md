@@ -8,7 +8,7 @@ Full Stack application for receiving, processing and classifying NF-e (Nota Fisc
 
 | Layer     | Technology                               |
 |-----------|------------------------------------------|
-| Backend   | Go 1.22 + Gin                            |
+| Backend   | Go 1.27 + Gin                            |
 | Queue     | RabbitMQ 3.13 (persistent messages)      |
 | Database  | PostgreSQL 16                            |
 | Frontend  | Vue 3 + Vite + TypeScript + Tailwind CSS |
@@ -66,7 +66,7 @@ Full Stack application for receiving, processing and classifying NF-e (Nota Fisc
 
 - [Docker](https://docs.docker.com/get-docker/) with **buildx plugin**
 - [Docker Compose](https://docs.docker.com/compose/)
-- [Go 1.22+](https://golang.org/dl/) — required to generate Swagger docs locally
+- [Go 1.27+](https://golang.org/dl/) — required to generate Swagger docs locally
 - [swag CLI](https://github.com/swaggo/swag) — required to generate Swagger docs
 
 ### Installing prerequisites
@@ -301,7 +301,7 @@ nfe-processor/
 │   │   ├── parser/
 │   │   │   ├── parser.go               # NF-e XML parser (nfeProc only)
 │   │   │   ├── validate.go             # Mod 11 (access key + CNPJ) validation
-│   │   │   ├── xsd.go                  # XSD structural validation via libxml2
+│   │   │   ├── xsd.go                  # XSD structural validation (helium, pure Go)
 │   │   │   └── schemas/                # Official SEFAZ XSD schemas (see below)
 │   │   ├── queue/                      # RabbitMQ producer and consumer
 │   │   ├── mock/                       # Internal clients mock
@@ -411,7 +411,7 @@ major/minor version but not to a specific digest. For a fully hermetic build in 
 replace tags with their SHA256 digest:
 
 ```
-FROM golang:1.22-alpine@sha256:<hash>
+FROM golang:1.27-alpine@sha256:<hash>
 ```
 
 Go dependencies are fully locked via `go.sum`. Node dependencies are locked via `package-lock.json`
