@@ -141,9 +141,9 @@ func (s *NFeService) classify(nfe *domain.NFe) {
 	nfe.UnidentifiedNote = "neither issuer nor recipient CNPJ matches an internal client"
 }
 
-func (s *NFeService) ListAll() ([]domain.NFe, error)              { return s.repo.ListAll() }
-func (s *NFeService) ListUnidentified() ([]domain.NFe, error)     { return s.repo.ListUnidentified() }
-func (s *NFeService) ListQuarantine() ([]domain.NFe, error)       { return s.repo.ListQuarantine() }
+func (s *NFeService) ListAll() ([]domain.NFe, error)                 { return s.repo.ListAll() }
+func (s *NFeService) ListUnidentified() ([]domain.NFe, error)        { return s.repo.ListUnidentified() }
+func (s *NFeService) ListQuarantine() ([]domain.NFe, error)          { return s.repo.ListQuarantine() }
 func (s *NFeService) ClientSummary() ([]domain.ClientSummary, error) { return s.repo.ClientSummary() }
 func (s *NFeService) InternalClients() ([]domain.InternalClient, error) {
 	return s.clients.GetAll()

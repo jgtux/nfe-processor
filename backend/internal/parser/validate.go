@@ -30,9 +30,10 @@ func validateMod11NFeKey(key string) bool {
 // validateCNPJ validates a 14-digit CNPJ using mod 11.
 //
 // Algorithm (Receita Federal):
-//   1st DV: weights 5,4,3,2,9,8,7,6,5,4,3,2 over first 12 digits
-//   2nd DV: weights 6,5,4,3,2,9,8,7,6,5,4,3,2 over first 13 digits (including 1st DV)
-//   remainder < 2 → DV = 0; otherwise DV = 11 - remainder
+//
+//	1st DV: weights 5,4,3,2,9,8,7,6,5,4,3,2 over first 12 digits
+//	2nd DV: weights 6,5,4,3,2,9,8,7,6,5,4,3,2 over first 13 digits (including 1st DV)
+//	remainder < 2 → DV = 0; otherwise DV = 11 - remainder
 func validateCNPJ(cnpj string) error {
 	if len(cnpj) != 14 {
 		return fmt.Errorf("CNPJ must be 14 digits, got %d", len(cnpj))
@@ -95,15 +96,16 @@ func reverse(s string) string {
 // validateAccessKey validates the NF-e access key format and mod 11 check digit.
 //
 // Key structure (44 digits):
-//   [0:2]  cUF     state code
-//   [2:6]  AAMM    year and month of issue
-//   [6:20] CNPJ    issuer CNPJ (14 digits)
-//   [20:22] mod    NF-e model: 55 = NF-e, 65 = NFC-e
-//   [22:25] serie  series
-//   [25:34] nNF    document number
-//   [34:35] tpEmis emission type
-//   [35:43] cNF    random numeric code
-//   [43]   cDV     mod 11 check digit
+//
+//	[0:2]  cUF     state code
+//	[2:6]  AAMM    year and month of issue
+//	[6:20] CNPJ    issuer CNPJ (14 digits)
+//	[20:22] mod    NF-e model: 55 = NF-e, 65 = NFC-e
+//	[22:25] serie  series
+//	[25:34] nNF    document number
+//	[34:35] tpEmis emission type
+//	[35:43] cNF    random numeric code
+//	[43]   cDV     mod 11 check digit
 func validateAccessKey(key string) error {
 	key = strings.TrimPrefix(key, "NFe")
 

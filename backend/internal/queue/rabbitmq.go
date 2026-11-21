@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/nfe-processor/backend/internal/config"
 	"github.com/nfe-processor/backend/internal/domain"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // RabbitMQ wraps a persistent AMQP connection and channel.
@@ -71,10 +71,10 @@ func (r *RabbitMQ) Publish(msg domain.QueueMessage) error {
 	}
 
 	err = r.ch.Publish(
-		"",           // default exchange
+		"", // default exchange
 		r.queueName,
-		false,        // mandatory
-		false,        // immediate
+		false, // mandatory
+		false, // immediate
 		amqp.Publishing{
 			ContentType:  "application/json",
 			DeliveryMode: amqp.Persistent, // survive broker restart

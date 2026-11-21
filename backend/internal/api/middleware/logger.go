@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"time"
-	"log"
 	"github.com/gin-gonic/gin"
+	"log"
+	"time"
 )
 
 // Logger logs each request with method, path, status and latency.
