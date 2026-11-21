@@ -9,20 +9,28 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # golang:1.22-alpine matches backend/Dockerfile's own build stage.
-    # Needed for real: the XSD validator (lestrrat-go/libxml2, a cgo
-    # binding) is incompatible with newer libxml2 releases shipped by
-    # non-Alpine distros/runners -- Alpine's older libxml2 is what this
-    # project is actually built and tested against.
-    container: golang:1.22-alpine
     defaults:
       run:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
-      - name: install build dependencies
-        run: apk add --no-cache git libxml2-dev gcc musl-dev
+      # The XSD validator is pure Go (lestrrat-go/helium) since the archived
+      # lestrrat-go/libxml2 binding no longer builds against current libxml2 (fails on 2.15),
+      # so the job no longer needs an Alpine container or libxml2-dev.
+      # Pinned to the same minor as backend/Dockerfile's build stage.
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+          cache-dependency-path: backend/go.sum
 
       - name: go test
+        # -race is the one thing that still needs cgo; the runner has gcc.
         run: CGO_ENABLED=1 go test ./... -v -race
+
+      - name: install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
+
+      - name: govulncheck
+        run: |
+          "$(go env GOPATH)/bin/govulncheck" ./...

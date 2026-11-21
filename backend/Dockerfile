@@ -1,14 +1,13 @@
-FROM golang:1.22-alpine AS builder
-
-RUN apk add --no-cache libxml2-dev gcc musl-dev
+FROM golang:1.27-alpine AS builder
 
 WORKDIR /app
 
 COPY . .
-RUN CGO_ENABLED=1 go build -o nfe-server ./cmd/server
+# Pure Go since the XSD validator moved to lestrrat-go/helium: no cgo, no
+# libxml2, so the binary is static and the runtime image needs nothing extra.
+RUN CGO_ENABLED=0 go build -o nfe-server ./cmd/server
 
-FROM alpine:3.19
-RUN apk add --no-cache libxml2
+FROM alpine:3.23
 
 WORKDIR /app
 COPY --from=builder /app/nfe-server .

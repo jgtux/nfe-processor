@@ -26,7 +26,7 @@ help:
 	@echo "    make backend-test    Run tests"
 	@echo ""
 	@echo "  Frontend"
-	@echo "    make frontend-install  npm install"
+	@echo "    make frontend-install  npm ci"
 	@echo "    make frontend-dev      Vite dev server (http://localhost:5173)"
 	@echo "    make frontend-build    Production build"
 	@echo ""
@@ -79,7 +79,7 @@ backend-test:
 # ── Frontend ──────────────────────────────────────────────────
 
 frontend-install:
-	cd frontend && npm install
+	cd frontend && npm ci
 
 frontend-dev:
 	cd frontend && npm run dev
